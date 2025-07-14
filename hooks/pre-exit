@@ -1,6 +1,14 @@
 #!/bin/bash
 set -euo pipefail
 
+echo "--- DEBUG: Current working directory: $(pwd)"
+echo "--- DEBUG: Hook is running from: $(dirname "$0")"
+echo "--- DEBUG: Listing hook folder:"
+ls -la "$(dirname "$0")"
+
+echo "--- DEBUG: Listing ../bin relative to hook:"
+ls -la "$(dirname "$0")/../bin"
+
 echo "--- Getting job log"
 LOG_FILE="$BUILDKITE_JOB_LOG_TMPFILE"
 
