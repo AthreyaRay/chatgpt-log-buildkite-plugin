@@ -7,13 +7,13 @@ echo "--- DEBUG: Listing hook folder:"
 ls -la "$(dirname "$0")"
 
 echo "--- DEBUG: Listing ../bin relative to hook:"
-ls -la "$(dirname "$0")/../bin"
+ls -la "$PWD"
 
 echo "--- Getting job logs"
 LOG_FILE="$BUILDKITE_JOB_LOG_TMPFILE"
 
 echo "--- Analyzing log with ChatGPT"
-SUGGESTION=$(bash "$(dirname "$0")/../bin/analyze-log.sh" "$LOG_FILE")
+SUGGESTION=$(bash "$BUILDKITE_PLUGINS_PATH//bin/analyze-log.sh" "$LOG_FILE")
 
 echo "--- Annotating build with ChatGPT's suggestion"
 echo "$SUGGESTION" | buildkite-agent annotate --style "info" --context "chatgpt-log"
