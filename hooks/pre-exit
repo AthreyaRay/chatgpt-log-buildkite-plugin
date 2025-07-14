@@ -9,7 +9,7 @@ ls -la "$(dirname "$0")"
 echo "--- DEBUG: Listing ../bin relative to hook:"
 ls -la "$(dirname "$0")/../bin"
 
-echo "--- Getting job log"
+echo "--- Getting job logs"
 LOG_FILE="$BUILDKITE_JOB_LOG_TMPFILE"
 
 echo "--- Analyzing log with ChatGPT"
