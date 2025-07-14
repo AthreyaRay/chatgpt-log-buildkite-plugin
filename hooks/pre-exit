@@ -10,7 +10,7 @@ echo "--- DEBUG: Listing ../bin relative to hook:"
 ls -la "$(dirname "$0")/../bin"
 
 echo "--- Getting job log"
-LOG_FILE="$BUILDKITE_JOB_LOG_TMPFILE"
+LOG_FILE="$BUILDKITE_JOB_LOG_PATH"
 
 echo "--- Analyzing log with ChatGPT"
 SUGGESTION=$(bash "$(dirname "$0")/../bin/analyze-log.sh" "$LOG_FILE")
