@@ -5,8 +5,14 @@ echo "--- Copying Buildkite job log to local file"
 cp "$BUILDKITE_JOB_LOG_TMPFILE" ./buildkite-job.log
 LOG_FILE="./buildkite-job.log"
 
-echo "--- Reading last 600 lines"
+echo "--- Showing last 20 lines of copied job log:"
+tail -n 20 "$LOG_FILE"
+
+echo "--- Reading last 600 lines for analysis"
 LOG_CHUNK=$(tail -n 600 "$LOG_FILE")
+
+echo "--- Log chunk preview (first 10 lines):"
+echo "$LOG_CHUNK" | head -n 10
 
 echo "--- Getting OpenAI API key from Secrets"
 OPENAI_API_KEY=$(buildkite-agent secret get "open_ai_key")
@@ -25,7 +31,17 @@ RESPONSE=$(curl -sS https://api.openai.com/v1/chat/completions \
     \"max_tokens\": 1500
   }")
 
-SUGGESTION=$(echo "$RESPONSE" | jq -r '.choices[0].message.content')
+echo "--- Raw response from ChatGPT:"
+echo "$RESPONSE"
+
+SUGGESTION=$(echo "$RESPONSE" | jq -er '.choices[0].message.content // empty') || {
+  echo "❌ Failed to parse ChatGPT suggestion"
+  exit 1
+}
+
+if [[ -z "$SUGGESTION" ]]; then
+  SUGGESTION="(ChatGPT did not return a suggestion. Check API key, log chunk, or error above.)"
+fi
 
 echo "--- Annotating build with ChatGPT's suggestion"
 echo "$SUGGESTION" | buildkite-agent annotate --style "info" --context "chatgpt-log"
