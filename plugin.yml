@@ -1,0 +1,11 @@
+name: chatgpt-log-plugin
+description: Annotates Buildkite builds with ChatGPT suggestions based on the job log.
+author: your-name
+requirements:
+- curl
+- jq
+configuration:
+  env:
+    OPENAI_API_KEY:
+      required: true
+      description: "Your OpenAI API key"
