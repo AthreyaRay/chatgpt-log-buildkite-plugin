@@ -8,11 +8,8 @@ LOG_FILE="./buildkite-job.log"
 echo "--- Showing last 20 lines of copied job log:"
 tail -n 20 "$LOG_FILE"
 
-echo "--- Reading last 600 lines for analysis"
-LOG_CHUNK=$(tail -n 600 "$LOG_FILE")
-
-echo "--- Log chunk preview (first 10 lines):"
-echo "$LOG_CHUNK" | head -n 10
+echo "--- Reading and escaping last 600 lines for JSON safety"
+LOG_CHUNK=$(tail -n 600 "$LOG_FILE" | jq -Rs .)
 
 echo "--- Getting OpenAI API key from Secrets"
 OPENAI_API_KEY=$(buildkite-agent secret get "open_ai_key")
@@ -25,7 +22,7 @@ RESPONSE=$(curl -sS https://api.openai.com/v1/chat/completions \
     \"model\": \"gpt-4o\",
     \"messages\": [
       {\"role\": \"system\", \"content\": \"You are a CI assistant. Analyze this Buildkite job log and explain what went wrong and how to fix it.\"},
-      {\"role\": \"user\", \"content\": \"$LOG_CHUNK\"}
+      {\"role\": \"user\", \"content\": $LOG_CHUNK}
     ],
     \"temperature\": 0.3,
     \"max_tokens\": 1500
