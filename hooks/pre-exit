@@ -1,6 +1,13 @@
 #!/bin/bash
 set -euo pipefail
 
+# Only analyze failed jobs
+if [[ "$BUILDKITE_JOB_EXIT_STATUS" == "0" ]]; then
+  echo "--- Job succeeded, skipping ChatGPT analysis"
+  exit 0
+fi
+
+echo "--- Job failed (exit status: $BUILDKITE_JOB_EXIT_STATUS), analyzing with ChatGPT"
 echo "--- Copying Buildkite job log to local file"
 cp "$BUILDKITE_JOB_LOG_TMPFILE" ./buildkite-job.log
 LOG_FILE="./buildkite-job.log"
