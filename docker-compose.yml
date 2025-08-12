@@ -1,8 +1,6 @@
 # Docker Compose configuration for running Bats tests
 # This creates an isolated environment with all dependencies needed to test the plugin
 
-version: '3.8'
-
 services:
   # Test runner service - runs our Bats tests in a controlled environment
   tests:
@@ -11,25 +9,14 @@ services:
     
     # Mount our project directory into the container
     volumes:
-      # Mount the entire project directory as read-only
-      - .:/code:ro
+      # Mount the entire project directory (need write access for test helpers)
+      - .:/code
     
     # Set the working directory inside the container
     working_dir: /code
     
-    # Install required dependencies and run tests
-    command: >
-      sh -c "
-        echo '--- Installing test dependencies' &&
-        apk add --no-cache curl jq git &&
-        
-        echo '--- Setting up Bats test helpers' &&
-        git clone https://github.com/bats-core/bats-support tests/test_helper/bats-support &&
-        git clone https://github.com/bats-core/bats-assert tests/test_helper/bats-assert &&
-        
-        echo '--- Running Bats tests' &&
-        bats tests/
-      "
+    # Run the test script
+    command: ./run-tests.sh
     
     # Set environment variables needed for testing
     environment:
