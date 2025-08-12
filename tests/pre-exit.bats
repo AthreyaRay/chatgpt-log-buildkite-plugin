@@ -3,9 +3,10 @@
 # This is the main test file for the ChatGPT Log Buildkite Plugin
 # Bats (Bash Automated Testing System) helps us test our shell scripts
 
-# Load test helpers - provides common functions for testing
-load 'test_helper/bats-support/load'  # Provides assertion helpers like assert_success
-load 'test_helper/bats-assert/load'   # Provides assertion helpers like assert_output
+# Load our custom test helper (comment out external helpers for now)
+# load 'test_helper/bats-support/load'
+# load 'test_helper/bats-assert/load'  
+load 'test_helper'
 
 # Setup function runs before each test
 setup() {
@@ -41,8 +42,8 @@ teardown() {
   run "${BATS_TEST_TMPDIR}/pre-exit"
   
   # Verify the script succeeded and skipped analysis
-  assert_success  # Script should exit with status 0
-  assert_output --partial "Job succeeded, skipping ChatGPT analysis"  # Should contain this message
+  [ "$status" -eq 0 ]  # Script should exit with status 0
+  [[ "$output" == *"Job succeeded, skipping ChatGPT analysis"* ]]  # Should contain this message
 }
 
 # TEST 2: Plugin should attempt analysis for failed jobs (exit status != 0)
@@ -91,10 +92,10 @@ teardown() {
   run "${BATS_TEST_TMPDIR}/pre-exit"
   
   # Verify the script ran the analysis process
-  assert_success  # Script should complete successfully
-  assert_output --partial "Job failed (exit status: 1), analyzing with ChatGPT"  # Should show it's analyzing
-  assert_output --partial "Copying Buildkite job log"  # Should copy the log
-  assert_output --partial "Sending log to ChatGPT"  # Should send to API
+  [ "$status" -eq 0 ]  # Script should complete successfully
+  [[ "$output" == *"Job failed (exit status: 1), analyzing with ChatGPT"* ]]  # Should show it's analyzing
+  [[ "$output" == *"Copying Buildkite job log"* ]]  # Should copy the log
+  [[ "$output" == *"Sending log to ChatGPT"* ]]  # Should send to API
 }
 
 # TEST 3: Plugin should handle missing log file gracefully
@@ -107,7 +108,7 @@ teardown() {
   run "${BATS_TEST_TMPDIR}/pre-exit"
   
   # The script should fail because it can't find the log file
-  assert_failure  # Script should exit with non-zero status
+  [ "$status" -ne 0 ]  # Script should exit with non-zero status
   # The exact error message depends on how the script handles missing files
 }
 
@@ -130,7 +131,7 @@ teardown() {
   run "${BATS_TEST_TMPDIR}/pre-exit"
   
   # The script should fail because it can't get the API key
-  assert_failure  # Script should exit with non-zero status
+  [ "$status" -ne 0 ]  # Script should exit with non-zero status
 }
 
 # TEST 5: Plugin should clean up temporary files
@@ -166,11 +167,11 @@ teardown() {
   run "${BATS_TEST_TMPDIR}/pre-exit"
   
   # Verify the script succeeded
-  assert_success
+  [ "$status" -eq 0 ]
   
   # Check that the temporary log file was cleaned up
   # The script creates ./buildkite-job.log and should remove it
-  assert [ ! -f "${BATS_TEST_TMPDIR}/buildkite-job.log" ]
+  [ ! -f "${BATS_TEST_TMPDIR}/buildkite-job.log" ]
 }
 
 # TEST 6: Plugin should handle different exit statuses correctly
@@ -192,5 +193,5 @@ teardown() {
   run "${BATS_TEST_TMPDIR}/pre-exit"
   
   # Should still attempt analysis for non-zero exit status
-  assert_output --partial "Job failed (exit status: 2), analyzing with ChatGPT"
+  [[ "$output" == *"Job failed (exit status: 2), analyzing with ChatGPT"* ]]
 }
