@@ -1,11 +1,14 @@
-name: chatgpt-log-plugin
-description: Annotates Buildkite builds with ChatGPT suggestions based on the job log.
-author: your-name
+name: ChatGPT Log Plugin
+description: Automatically analyzes failed Buildkite job logs using OpenAI's ChatGPT and provides intelligent suggestions for fixing issues through build annotations.
+author: AthreyaRay
 requirements:
 - curl
 - jq
+- buildkite-agent with --enable-job-log-tmpfile flag
 configuration:
+  properties: {}
   env:
     OPENAI_API_KEY:
       required: true
-      description: "Your OpenAI API key"
+      description: "Your OpenAI API key (should be stored in Buildkite secrets as 'open_ai_key')"
+  additionalProperties: false
