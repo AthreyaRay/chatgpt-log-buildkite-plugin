@@ -212,14 +212,58 @@ ls -la $BUILDKITE_JOB_LOG_TMPFILE
 
 ## Developing
 
-To run the tests:
+### Running Tests
 
+This plugin uses [Bats (Bash Automated Testing System)](https://github.com/bats-core/bats-core) for testing.
+
+**Run all tests with Docker (recommended):**
 ```bash
 docker-compose run --rm tests
 ```
 
-To test locally:
+**Run tests locally (requires Bats installation):**
 ```bash
+# Install Bats test helpers
+git clone https://github.com/bats-core/bats-support tests/test_helper/bats-support
+git clone https://github.com/bats-core/bats-assert tests/test_helper/bats-assert
+
+# Run tests
+bats tests/
+```
+
+**Install Bats locally:**
+```bash
+# macOS
+brew install bats-core
+
+# Ubuntu/Debian  
+sudo apt-get install bats
+
+# Or install from source
+git clone https://github.com/bats-core/bats-core.git
+cd bats-core
+sudo ./install.sh /usr/local
+```
+
+### Test Structure
+
+Our tests cover:
+- ✅ **Success case**: Plugin skips analysis when job succeeds (exit status 0)
+- ✅ **Failure case**: Plugin runs analysis when job fails (exit status != 0)  
+- ✅ **Error handling**: Missing log files, API key failures, network errors
+- ✅ **Cleanup**: Temporary files are properly removed
+- ✅ **Mocking**: External dependencies (curl, buildkite-agent, jq) are mocked
+
+### Manual Testing
+
+To test the plugin manually:
+```bash
+# Set up test environment
+export BUILDKITE_JOB_EXIT_STATUS="1"
+export BUILDKITE_JOB_LOG_TMPFILE="/tmp/test.log"  
+echo "Sample failed build output" > /tmp/test.log
+
+# Run the plugin
 ./hooks/pre-exit
 ```
 
