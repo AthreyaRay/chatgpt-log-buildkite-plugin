@@ -15,8 +15,9 @@ services:
     # Set the working directory inside the container
     working_dir: /code
     
-    # Run the test script
-    command: ./run-tests.sh
+    # Run tests directly with bats
+    entrypoint: ["bats"]
+    command: ["--tap", "tests/"]
     
     # Set environment variables needed for testing
     environment:
