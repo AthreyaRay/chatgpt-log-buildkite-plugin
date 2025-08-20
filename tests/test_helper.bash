@@ -177,11 +177,83 @@ verify_test_environment() {
   return 0
 }
 
+# Function to mock additional system commands needed by the plugin
+mock_system_commands() {
+  # Mock timeout command
+  function timeout() {
+    shift  # Remove timeout duration
+    "$@"   # Execute the rest of the command
+  }
+  export -f timeout
+  
+  # Mock sha256sum (Linux) and shasum (macOS) for log hashing
+  function sha256sum() {
+    echo "mockhashabcdef123456789 -"
+  }
+  export -f sha256sum
+  
+  function shasum() {
+    if [[ "$1" == "-a" && "$2" == "256" ]]; then
+      echo "mockhashabcdef123456789 -"
+    fi
+  }
+  export -f shasum
+  
+  # Mock date command for timestamp calculations
+  function date() {
+    case "$1" in
+      "+%s")
+        echo "1704067200"  # Fixed timestamp for testing
+        ;;
+      *)
+        command date "$@" 2>/dev/null || echo "mock-date"
+        ;;
+    esac
+  }
+  export -f date
+  
+  # Mock stat command for file timestamps
+  function stat() {
+    case "$*" in
+      *"-c %Y"*|*"-f %m"*)
+        echo "1704063600"  # Fixed older timestamp for cache testing
+        ;;
+      *)
+        echo "mock-stat-output"
+        ;;
+    esac
+  }
+  export -f stat
+  
+  # Mock mkdir and find commands
+  function mkdir() {
+    if [[ "$1" == "-p" ]]; then
+      # Just succeed silently for mkdir -p
+      return 0
+    fi
+    command mkdir "$@" 2>/dev/null || return 0
+  }
+  export -f mkdir
+  
+  function find() {
+    # Mock find command to not actually search filesystem
+    return 0
+  }
+  export -f find
+}
+
 # Function to clean up mock functions after tests
 cleanup_mocks() {
   unset -f curl 2>/dev/null || true
   unset -f buildkite-agent 2>/dev/null || true
   unset -f jq 2>/dev/null || true
+  unset -f timeout 2>/dev/null || true
+  unset -f sha256sum 2>/dev/null || true
+  unset -f shasum 2>/dev/null || true
+  unset -f date 2>/dev/null || true
+  unset -f stat 2>/dev/null || true
+  unset -f mkdir 2>/dev/null || true
+  unset -f find 2>/dev/null || true
 }
 
 # Export all functions so they can be used in test files
@@ -190,6 +262,7 @@ export -f mock_openai_failure
 export -f mock_buildkite_agent_success
 export -f mock_buildkite_agent_failure
 export -f mock_jq
+export -f mock_system_commands
 export -f create_sample_log_file
 export -f verify_test_environment
 export -f cleanup_mocks

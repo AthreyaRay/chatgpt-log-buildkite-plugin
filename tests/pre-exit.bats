@@ -50,6 +50,16 @@ teardown() {
 @test "attempts analysis when job fails (exit status 1)" {
   # Set the job exit status to 1 (failure)
   export BUILDKITE_JOB_EXIT_STATUS="1"
+  export BUILDKITE_PIPELINE_SLUG="test-pipeline"
+  export BUILDKITE_BRANCH="main"
+  export BUILDKITE_STEP_KEY="test-step"
+  export BUILDKITE_JOB_ID="test-job-123"
+  
+  # Create a sample failure log
+  create_sample_log_file "$BUILDKITE_JOB_LOG_TMPFILE" "failure"
+  
+  # Mock system commands
+  mock_system_commands
   
   # Mock buildkite-agent secret command to return a fake API key
   # This creates a fake buildkite-agent command that returns our test key
@@ -58,7 +68,7 @@ teardown() {
       echo "sk-test-api-key-12345"
     elif [[ "$1" == "annotate" ]]; then
       # Mock the annotate command to just echo what it receives
-      cat
+      cat > /dev/null
     else
       # For any other buildkite-agent command, just return success
       return 0
@@ -75,15 +85,15 @@ teardown() {
   
   # Mock jq command to parse JSON (just return the content for simplicity)
   function jq() {
-    if [[ "$1" == "-Rs" && "$2" == "." ]]; then
-      # When escaping for JSON, just pass through
-      cat
+    if [[ "$1" == "-Rs" ]]; then
+      # When escaping for JSON, just pass through with quotes
+      sed 's/^/"/' | sed 's/$/"/'
     elif [[ "$1" == "-er" ]]; then
       # When extracting content, return our mock suggestion
       echo "The test failed because npm test could not find the test files. Try running npm install first."
     else
       # Default jq behavior
-      command jq "$@"
+      command jq "$@" 2>/dev/null || echo "mock-jq-output"
     fi
   }
   export -f jq  # Make the function available to the script
@@ -137,6 +147,16 @@ teardown() {
 # TEST 5: Plugin should clean up temporary files
 @test "cleans up temporary log file" {
   export BUILDKITE_JOB_EXIT_STATUS="1"
+  export BUILDKITE_PIPELINE_SLUG="test-pipeline"
+  export BUILDKITE_BRANCH="main"
+  export BUILDKITE_STEP_KEY="test-step"
+  export BUILDKITE_JOB_ID="test-job-123"
+  
+  # Create a sample failure log
+  create_sample_log_file "$BUILDKITE_JOB_LOG_TMPFILE" "failure"
+  
+  # Mock system commands
+  mock_system_commands
   
   # Mock all the external commands to succeed
   function buildkite-agent() {
@@ -156,9 +176,11 @@ teardown() {
   
   function jq() {
     if [[ "$1" == "-Rs" ]]; then
-      cat
+      sed 's/^/"/' | sed 's/$/"/'
     elif [[ "$1" == "-er" ]]; then
       echo "Test suggestion"
+    else
+      command jq "$@" 2>/dev/null || echo "mock-jq-output"
     fi
   }
   export -f jq

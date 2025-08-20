@@ -6,7 +6,23 @@ requirements:
 - jq
 - buildkite-agent with --enable-job-log-tmpfile flag
 configuration:
-  properties: {}
+  properties:
+    max_tokens:
+      type: number
+      default: 1500
+      description: "Maximum tokens for ChatGPT response (controls cost)"
+    model:
+      type: string
+      default: "gpt-4o-mini"
+      description: "OpenAI model to use (gpt-4o-mini is cheaper than gpt-4o)"
+    max_log_lines:
+      type: number
+      default: 600
+      description: "Maximum number of log lines to analyze"
+    timeout:
+      type: number
+      default: 30
+      description: "API request timeout in seconds"
   env:
     OPENAI_API_KEY:
       required: true

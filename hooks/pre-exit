@@ -7,7 +7,15 @@ if [[ "$BUILDKITE_JOB_EXIT_STATUS" == "0" ]]; then
   exit 0
 fi
 
+# Configuration defaults and overrides
+MAX_TOKENS=${BUILDKITE_PLUGIN_CHATGPT_LOGS_MAX_TOKENS:-1500}
+MODEL=${BUILDKITE_PLUGIN_CHATGPT_LOGS_MODEL:-"gpt-4o-mini"}
+MAX_LOG_LINES=${BUILDKITE_PLUGIN_CHATGPT_LOGS_MAX_LOG_LINES:-600}
+TIMEOUT=${BUILDKITE_PLUGIN_CHATGPT_LOGS_TIMEOUT:-30}
+
 echo "--- Job failed (exit status: $BUILDKITE_JOB_EXIT_STATUS), analyzing with ChatGPT"
+echo "--- Configuration: Model=$MODEL, MaxTokens=$MAX_TOKENS, MaxLines=$MAX_LOG_LINES, Timeout=${TIMEOUT}s"
+
 echo "--- Copying Buildkite job log to local file"
 cp "$BUILDKITE_JOB_LOG_TMPFILE" ./buildkite-job.log
 LOG_FILE="./buildkite-job.log"
@@ -15,36 +23,90 @@ LOG_FILE="./buildkite-job.log"
 echo "--- Showing last 20 lines of copied job log:"
 tail -n 20 "$LOG_FILE"
 
-echo "--- Reading and escaping last 600 lines for JSON safety"
-LOG_CHUNK=$(tail -n 600 "$LOG_FILE" | jq -Rs .)
+# Smart log filtering - focus on error context
+echo "--- Extracting error context from logs"
+ERROR_CONTEXT=$(grep -A10 -B5 -i "error\|failed\|exception\|fatal\|traceback\|panic\|segfault" "$LOG_FILE" 2>/dev/null | tail -n $((MAX_LOG_LINES / 2)) || true)
 
-echo "--- Getting OpenAI API key from Secrets"
-OPENAI_API_KEY=$(buildkite-agent secret get "open_ai_key")
+# If no errors found, fall back to tail
+if [[ -z "$ERROR_CONTEXT" ]]; then
+  echo "--- No specific errors found, using last $MAX_LOG_LINES lines"
+  LOG_CONTENT=$(tail -n "$MAX_LOG_LINES" "$LOG_FILE")
+else
+  echo "--- Found error patterns, including context + recent logs"
+  RECENT_LOGS=$(tail -n $((MAX_LOG_LINES / 2)) "$LOG_FILE")
+  LOG_CONTENT=$(printf "%s\n\n--- Recent logs ---\n%s" "$ERROR_CONTEXT" "$RECENT_LOGS")
+fi
 
-echo "--- Sending log to ChatGPT for analysis"
-RESPONSE=$(curl -sS https://api.openai.com/v1/chat/completions \
-  -H "Authorization: Bearer $OPENAI_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d "{
-    \"model\": \"gpt-4o\",
-    \"messages\": [
-      {\"role\": \"system\", \"content\": \"You are a CI assistant. Analyze this Buildkite job log and explain what went wrong and how to fix it.\"},
-      {\"role\": \"user\", \"content\": $LOG_CHUNK}
-    ],
-    \"temperature\": 0.3,
-    \"max_tokens\": 1500
-  }")
+# Sanitize sensitive information
+echo "--- Sanitizing logs for security"
+LOG_CONTENT=$(echo "$LOG_CONTENT" | sed -E 's/(password|token|key|secret|api[_-]?key)=[^[:space:]]*/\1=***REDACTED***/gi')
 
-echo "--- Raw response from ChatGPT:"
-echo "$RESPONSE"
+# Create cache key for duplicate detection
+LOG_HASH=$(echo "$LOG_CONTENT" | sha256sum | cut -d' ' -f1 2>/dev/null || echo "$LOG_CONTENT" | shasum -a 256 | cut -d' ' -f1)
+CACHE_DIR="/tmp/chatgpt-cache"
+CACHE_FILE="$CACHE_DIR/cache-$LOG_HASH"
+mkdir -p "$CACHE_DIR"
 
-SUGGESTION=$(echo "$RESPONSE" | jq -er '.choices[0].message.content // empty') || {
-  echo "❌ Failed to parse ChatGPT suggestion"
-  exit 1
-}
+# Check cache (1 hour TTL)
+if [[ -f "$CACHE_FILE" && $(($(date +%s) - $(stat -c %Y "$CACHE_FILE" 2>/dev/null || stat -f %m "$CACHE_FILE"))) -lt 3600 ]]; then
+  echo "--- Using cached ChatGPT response (hash: ${LOG_HASH:0:8})"
+  SUGGESTION=$(cat "$CACHE_FILE")
+else
+  echo "--- Escaping log content for JSON"
+  LOG_CHUNK=$(echo "$LOG_CONTENT" | jq -Rs .)
+  
+  echo "--- Getting OpenAI API key from Secrets"
+  OPENAI_API_KEY=$(buildkite-agent secret get "open_ai_key")
+  
+  # Build context information
+  BUILD_CONTEXT="Pipeline: $BUILDKITE_PIPELINE_SLUG, Branch: $BUILDKITE_BRANCH, Step: $BUILDKITE_STEP_KEY, Job: $BUILDKITE_JOB_ID"
+  
+  # Enhanced system prompt
+  SYSTEM_PROMPT="You are a CI/CD expert analyzing a Buildkite job failure. Context: $BUILD_CONTEXT
 
-if [[ -z "$SUGGESTION" ]]; then
-  SUGGESTION="(ChatGPT did not return a suggestion. Check API key, log chunk, or error above.)"
+  Analyze this log and provide:
+  1. **Root Cause**: What specifically went wrong (be precise)
+  2. **Immediate Fix**: Exact steps to resolve this failure  
+  3. **Prevention**: How to avoid this in the future
+  
+  Format as clear markdown with sections. Focus on actionable advice."
+  
+  echo "--- Sending log to ChatGPT for analysis (${#LOG_CONTENT} chars, hash: ${LOG_HASH:0:8})"
+  RESPONSE=$(timeout "$TIMEOUT" curl -sS https://api.openai.com/v1/chat/completions \
+    --max-time $((TIMEOUT - 5)) \
+    -H "Authorization: Bearer $OPENAI_API_KEY" \
+    -H "Content-Type: application/json" \
+    -d "{
+      \"model\": \"$MODEL\",
+      \"messages\": [
+        {\"role\": \"system\", \"content\": $(echo "$SYSTEM_PROMPT" | jq -Rs .)},
+        {\"role\": \"user\", \"content\": $LOG_CHUNK}
+      ],
+      \"temperature\": 0.3,
+      \"max_tokens\": $MAX_TOKENS
+    }") || {
+    echo "❌ OpenAI API timeout or network error"
+    buildkite-agent annotate "🤖 ChatGPT analysis failed due to network issues. Please check logs manually." --style "warning" --context "chatgpt-log"
+    rm -f "$LOG_FILE"
+    exit 0
+  }
+  
+  echo "--- Parsing ChatGPT response"
+  SUGGESTION=$(echo "$RESPONSE" | jq -er '.choices[0].message.content // empty') || {
+    echo "❌ Failed to parse ChatGPT suggestion"
+    ERROR_MSG=$(echo "$RESPONSE" | jq -r '.error.message // "Unknown API error"')
+    buildkite-agent annotate "🤖 ChatGPT analysis failed: $ERROR_MSG" --style "warning" --context "chatgpt-log"
+    rm -f "$LOG_FILE"
+    exit 0
+  }
+  
+  if [[ -z "$SUGGESTION" ]]; then
+    SUGGESTION="🤖 ChatGPT did not return a suggestion. The log may be too complex or contain unsupported content."
+  else
+    # Cache the successful response
+    echo "$SUGGESTION" > "$CACHE_FILE"
+    echo "--- Cached response for future use"
+  fi
 fi
 
 echo "--- Annotating build with ChatGPT's suggestion"
@@ -52,3 +114,6 @@ echo "$SUGGESTION" | buildkite-agent annotate --style "info" --context "chatgpt-
 
 echo "--- Cleaning up"
 rm -f "$LOG_FILE"
+
+# Clean old cache files (older than 24 hours)
+find "$CACHE_DIR" -name "cache-*" -type f -mtime +1 -delete 2>/dev/null || true
