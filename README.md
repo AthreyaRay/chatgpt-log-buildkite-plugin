@@ -23,10 +23,12 @@ steps:
 
 When a job fails, this plugin:
 
-1. Copies the Buildkite job log to analyze the last 600 lines
-2. Sends the log content to OpenAI's GPT-4o model for analysis
-3. Annotates the build with ChatGPT's suggestions for fixing the issue
-4. Cleans up temporary files
+1. **Smart Log Filtering**: Extracts error patterns and context from logs (not just tail)
+2. **Security Sanitization**: Removes sensitive information before sending to OpenAI
+3. **Intelligent Caching**: Avoids duplicate API calls for identical failures (1-hour TTL)
+4. **OpenAI Analysis**: Sends filtered logs to GPT-4o-mini for intelligent analysis
+5. **Structured Annotations**: Creates build annotations with Root Cause, Fix, and Prevention tips
+6. **Cleanup**: Removes temporary files and manages cache storage
 
 ## Requirements
 
@@ -53,7 +55,26 @@ OpenAI API key stored in Buildkite secrets as `open_ai_key`
 
 ## Configuration
 
-This plugin requires no configuration - it works automatically when added to failing jobs.
+The plugin works with sensible defaults, but can be customized:
+
+```yaml
+steps:
+  - label: ":test_tube: Test with custom config"
+    command: npm test
+    plugins:
+      - AthreyaRay/chatgpt-logs#v1.0.0:
+          model: "gpt-4o"           # Default: "gpt-4o-mini" (cheaper)
+          max_tokens: 2000          # Default: 1500
+          max_log_lines: 800        # Default: 600  
+          timeout: 45               # Default: 30 seconds
+```
+
+### Configuration Options
+
+- **`model`** (string): OpenAI model to use. Default: `gpt-4o-mini` (cost-effective)
+- **`max_tokens`** (number): Maximum tokens for ChatGPT response. Default: `1500`
+- **`max_log_lines`** (number): Maximum log lines to analyze. Default: `600`
+- **`timeout`** (number): API request timeout in seconds. Default: `30`
 
 ### API Key Setup
 
@@ -143,9 +164,10 @@ buildkite-agent start --enable-job-log-tmpfile --token="your-agent-token"
 ## Cost Implications
 
 Each analysis makes an API call to OpenAI:
-- Uses GPT-4o model
-- Processes up to 600 lines of log content
-- Costs approximately $0.01-0.05 per analysis
+- Uses GPT-4o-mini by default (much cheaper than GPT-4o)
+- Processes up to 600 lines of log content (configurable)
+- Costs approximately $0.001-0.01 per analysis with gpt-4o-mini
+- Includes smart caching to avoid duplicate API calls (1-hour TTL)
 - Only triggers on failed jobs to minimize usage
 
 Monitor your usage at [OpenAI Usage Dashboard](https://platform.openai.com/usage)

@@ -1,0 +1,30 @@
+steps:
+  - label: ":shell: Shellcheck"
+    plugins:
+      - shellcheck#v1.3.0:
+          files: hooks/**
+
+  - label: ":hammer: Tests"
+    plugins:
+      - docker-compose#v4.0.0:
+          run: tests
+
+  - label: ":sparkles: Plugin Lint"
+    plugins:
+      - plugin-linter#v3.3.0:
+          id: chatgpt-logs
+
+  - wait
+
+  - label: ":robot_face: Self-test"
+    plugins:
+      - AthreyaRay/chatgpt-logs#$BUILDKITE_COMMIT: ~
+    env:
+      BUILDKITE_JOB_EXIT_STATUS: "1"
+    command: |
+      echo "--- Creating test failure scenario"
+      echo "This step intentionally fails to test the ChatGPT analysis plugin"
+      echo "Error: npm test failed with exit code 1" 
+      echo "TypeError: Cannot read property 'map' of undefined"
+      echo "  at App.render (src/App.js:25:15)"
+      exit 1
