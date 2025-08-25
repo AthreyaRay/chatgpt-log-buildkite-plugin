@@ -11,12 +11,12 @@ steps:
   - label: ":hammer: Build"
     command: make build
     plugins:
-      - AthreyaRay/chatgpt-logs#v1.0.0: ~
+      - AthreyaRay/chatgpt-logs#v1.0.4: ~
 
   - label: ":test_tube: Test"
     command: npm test
     plugins:
-      - AthreyaRay/chatgpt-logs#v1.0.0: ~
+      - AthreyaRay/chatgpt-logs#v1.0.4: ~
 ```
 
 ## How it works
@@ -62,7 +62,7 @@ steps:
   - label: ":test_tube: Test with custom config"
     command: npm test
     plugins:
-      - AthreyaRay/chatgpt-logs#v1.0.0:
+      - AthreyaRay/chatgpt-logs#v1.0.4:
           model: "gpt-4o"           # Default: "gpt-4o-mini" (cheaper)
           max_tokens: 2000          # Default: 1500
           max_log_lines: 800        # Default: 600  
@@ -99,7 +99,7 @@ steps:
     env:
       OPENAI_API_KEY: "sk-your-api-key-here"
     plugins:
-      - AthreyaRay/chatgpt-logs#v1.0.0: ~
+      - AthreyaRay/chatgpt-logs#v1.0.4: ~
 ```
 
 ## Installation
@@ -212,7 +212,7 @@ steps:
       set -x  # Enable bash debugging
       npm test
     plugins:
-      - AthreyaRay/chatgpt-logs#v1.0.0: ~
+      - AthreyaRay/chatgpt-logs#v1.0.4: ~
 ```
 
 ### Manual Testing

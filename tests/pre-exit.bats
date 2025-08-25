@@ -61,6 +61,34 @@ teardown() {
   # Mock system commands
   mock_system_commands
   
+  # Mock additional commands that might be missing
+  function grep() {
+    case "$*" in
+      *"error\|failed\|exception"*)
+        echo "Error: npm test failed with exit code 1"
+        echo "TypeError: Cannot read property 'map' of undefined"
+        ;;
+      *)
+        command grep "$@" 2>/dev/null || true
+        ;;
+    esac
+  }
+  export -f grep
+  
+  function tail() {
+    case "$*" in
+      *"-n"*)
+        echo "Sample build output"
+        echo "Error: npm test failed"
+        echo "Exit code: 1"
+        ;;
+      *)
+        command tail "$@" 2>/dev/null || true
+        ;;
+    esac
+  }
+  export -f tail
+  
   # Mock buildkite-agent secret command to return a fake API key
   # This creates a fake buildkite-agent command that returns our test key
   function buildkite-agent() {
