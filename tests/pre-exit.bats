@@ -166,6 +166,22 @@ teardown() {
 # TEST 4: Plugin should handle API key retrieval failure
 @test "handles missing API key gracefully" {
   export BUILDKITE_JOB_EXIT_STATUS="1"
+  export BUILDKITE_PIPELINE_SLUG="test-pipeline"
+  export BUILDKITE_BRANCH="main"
+  export BUILDKITE_STEP_KEY="test-step"
+  export BUILDKITE_JOB_ID="test-job-123"
+  
+  # Make sure all plugin environment variables are set
+  export BUILDKITE_PLUGIN_CHATGPT_LOGS_MAX_TOKENS="1500"
+  export BUILDKITE_PLUGIN_CHATGPT_LOGS_MODEL="gpt-4o-mini"
+  export BUILDKITE_PLUGIN_CHATGPT_LOGS_MAX_LOG_LINES="600"
+  export BUILDKITE_PLUGIN_CHATGPT_LOGS_TIMEOUT="30"
+  
+  # Create a sample failure log
+  create_sample_log_file "$BUILDKITE_JOB_LOG_TMPFILE" "failure"
+  
+  # Mock system commands
+  mock_system_commands
   
   # Mock buildkite-agent to fail when getting the secret
   function buildkite-agent() {
@@ -247,6 +263,22 @@ teardown() {
 @test "handles various non-zero exit statuses" {
   # Test with exit status 2 (another common failure code)
   export BUILDKITE_JOB_EXIT_STATUS="2"
+  export BUILDKITE_PIPELINE_SLUG="test-pipeline"
+  export BUILDKITE_BRANCH="main"
+  export BUILDKITE_STEP_KEY="test-step"
+  export BUILDKITE_JOB_ID="test-job-123"
+  
+  # Make sure all plugin environment variables are set
+  export BUILDKITE_PLUGIN_CHATGPT_LOGS_MAX_TOKENS="1500"
+  export BUILDKITE_PLUGIN_CHATGPT_LOGS_MODEL="gpt-4o-mini"
+  export BUILDKITE_PLUGIN_CHATGPT_LOGS_MAX_LOG_LINES="600"
+  export BUILDKITE_PLUGIN_CHATGPT_LOGS_TIMEOUT="30"
+  
+  # Create a sample failure log
+  create_sample_log_file "$BUILDKITE_JOB_LOG_TMPFILE" "failure"
+  
+  # Mock system commands
+  mock_system_commands
   
   # Mock the commands minimally
   function buildkite-agent() { return 0; }
