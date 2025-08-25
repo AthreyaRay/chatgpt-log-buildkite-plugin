@@ -240,6 +240,26 @@ mock_system_commands() {
     return 0
   }
   export -f find
+  
+  # Mock sed command for log sanitization
+  function sed() {
+    case "$*" in
+      *"password\|token"*)
+        # Just return the input without modification for testing
+        cat
+        ;;
+      *)
+        command sed "$@" 2>/dev/null || cat
+        ;;
+    esac
+  }
+  export -f sed
+  
+  # Mock cut command
+  function cut() {
+    echo "mockhashabcdef123456789"
+  }
+  export -f cut
 }
 
 # Function to clean up mock functions after tests
@@ -254,6 +274,8 @@ cleanup_mocks() {
   unset -f stat 2>/dev/null || true
   unset -f mkdir 2>/dev/null || true
   unset -f find 2>/dev/null || true
+  unset -f sed 2>/dev/null || true
+  unset -f cut 2>/dev/null || true
 }
 
 # Export all functions so they can be used in test files
