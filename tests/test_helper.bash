@@ -225,13 +225,10 @@ mock_system_commands() {
   }
   export -f stat
   
-  # Mock mkdir and find commands
+  # Mock mkdir command - actually create directories for tests
   function mkdir() {
-    if [[ "$1" == "-p" ]]; then
-      # Just succeed silently for mkdir -p
-      return 0
-    fi
-    command mkdir "$@" 2>/dev/null || return 0
+    # Actually create the directories since the script writes cache files
+    command mkdir "$@" 2>/dev/null || true
   }
   export -f mkdir
   

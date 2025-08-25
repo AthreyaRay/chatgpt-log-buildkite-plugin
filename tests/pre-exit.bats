@@ -139,15 +139,8 @@ teardown() {
   }
   export -f jq  # Make the function available to the script
   
-  # Run the plugin script with debugging
-  run bash -x "${BATS_TEST_TMPDIR}/pre-exit"
-  
-  # If it failed, show what happened
-  if [ "$status" -ne 0 ]; then
-    echo "Script failed with status: $status" >&3
-    echo "Output:" >&3
-    echo "$output" >&3
-  fi
+  # Run the plugin script
+  run "${BATS_TEST_TMPDIR}/pre-exit"
   
   # Verify the script ran the analysis process
   [ "$status" -eq 0 ]  # Script should complete successfully
