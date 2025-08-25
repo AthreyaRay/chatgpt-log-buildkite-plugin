@@ -55,6 +55,12 @@ teardown() {
   export BUILDKITE_STEP_KEY="test-step"
   export BUILDKITE_JOB_ID="test-job-123"
   
+  # Make sure all plugin environment variables are set
+  export BUILDKITE_PLUGIN_CHATGPT_LOGS_MAX_TOKENS="1500"
+  export BUILDKITE_PLUGIN_CHATGPT_LOGS_MODEL="gpt-4o-mini"
+  export BUILDKITE_PLUGIN_CHATGPT_LOGS_MAX_LOG_LINES="600"
+  export BUILDKITE_PLUGIN_CHATGPT_LOGS_TIMEOUT="30"
+  
   # Create a sample failure log
   create_sample_log_file "$BUILDKITE_JOB_LOG_TMPFILE" "failure"
   
@@ -88,6 +94,19 @@ teardown() {
     esac
   }
   export -f tail
+  
+  # Mock cp command
+  function cp() {
+    # Just succeed silently for cp operations
+    return 0
+  }
+  export -f cp
+  
+  # Mock printf command
+  function printf() {
+    echo "$@"
+  }
+  export -f printf
   
   # Mock buildkite-agent secret command to return a fake API key
   # This creates a fake buildkite-agent command that returns our test key
