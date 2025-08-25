@@ -1,6 +1,4 @@
-# ChatGPT Log Buildkite Plugin
-
-[![Build status](https://badge.buildkite.com/d341e2860c2ccece23912ff98560afabf809370063981defc5.svg)](https://buildkite.com/personal-use-4/athreya-test2)
+# ChatGPT Log Buildkite Plugin [![Build status](https://badge.buildkite.com/d341e2860c2ccece23912ff98560afabf809370063981defc5.svg)](https://buildkite.com/personal-use-4/athreya-test2)
 
 Automatically analyzes failed Buildkite job logs using OpenAI's ChatGPT and provides intelligent suggestions for fixing issues through build annotations.
 
