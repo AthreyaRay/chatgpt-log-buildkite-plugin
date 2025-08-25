@@ -6,38 +6,10 @@ steps:
 
   - label: ":hammer: Tests"
     plugins:
-      - docker-compose#v4.0.0:
+      - docker-compose#v3.9.0:
           run: tests
 
   - label: ":sparkles: Plugin Lint"
     plugins:
       - plugin-linter#v3.3.0:
-          id: chatgpt-logs
-
-  - wait
-
-  - label: ":robot_face: Self-test"
-    plugins:
-      - AthreyaRay/chatgpt-logs#$BUILDKITE_COMMIT: ~
-    command: |
-      echo "--- Testing ChatGPT plugin with intentional failure"
-      echo "Starting tests..."
-      
-      # Simulate a realistic test failure
-      echo "Running npm test..."
-      echo "FAIL src/components/App.test.js"
-      echo "  ✕ renders user dashboard (25ms)"
-      echo ""
-      echo "  ● renders user dashboard"
-      echo ""
-      echo "    TypeError: Cannot read property 'map' of undefined"
-      echo "      at UserDashboard.render (src/components/App.js:25:15)"
-      echo "      at renderComponent (src/test-utils.js:12:3)"
-      echo ""
-      echo "Test Suites: 1 failed, 0 passed, 1 total"
-      echo "Tests:       1 failed, 0 passed, 1 total"
-      echo "Snapshots:   0 total"
-      echo "Time:        2.847s"
-      
-      # Actually fail the job so the plugin can analyze it
-      exit 1
+          id: AthreyaRay/chatgpt-logs

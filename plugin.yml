@@ -23,8 +23,4 @@ configuration:
       type: number
       default: 30
       description: "API request timeout in seconds"
-  env:
-    OPENAI_API_KEY:
-      required: true
-      description: "Your OpenAI API key (should be stored in Buildkite secrets as 'open_ai_key')"
   additionalProperties: false

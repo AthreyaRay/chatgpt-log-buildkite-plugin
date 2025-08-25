@@ -105,7 +105,7 @@ teardown() {
   [ "$status" -eq 0 ]  # Script should complete successfully
   [[ "$output" == *"Job failed (exit status: 1), analyzing with ChatGPT"* ]]  # Should show it's analyzing
   [[ "$output" == *"Copying Buildkite job log"* ]]  # Should copy the log
-  [[ "$output" == *"Sending log to ChatGPT"* ]]  # Should send to API
+  [[ "$output" == *"Sending log to ChatGPT for analysis"* ]]  # Should send to API
 }
 
 # TEST 3: Plugin should handle missing log file gracefully
